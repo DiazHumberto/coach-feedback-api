@@ -1,0 +1,217 @@
+{
+  "session_id": 5,
+  "profile_id": 55,
+  "drill_id": 47,
+  "session_key": "drill_47_profile55_session5",
+  "created_utc": "2026-01-13T16:30:00Z",
+  "video": {
+    "fps": 30,
+    "num_frames": 846,
+    "duration_s": 28.2,
+    "resolution": [640, 480],
+    "source_filename": "148adafe-0a91-40be-a554-13cd7e45236c.avi"
+  },
+  "player_bio": {
+    "age_band": "9-12",
+    "gender": "unspecified",
+    "skill_level": "developmental"
+  },
+  "constraints": {
+    "environment": "4x4_ft_mat",
+    "allowed_actions": [
+      "ball touches on mat",
+      "toe taps",
+      "inside touches",
+      "sole rolls",
+      "pull-push",
+      "side-to-side touches"
+    ],
+    "not_allowed_actions": [
+      "kicking/shooting",
+      "passing",
+      "jogging/running",
+      "large-space dribbling"
+    ]
+  },
+  "ball_control_analysis": {
+    "total_touches": 71,
+    "left_touches": 35,
+    "right_touches": 36,
+    "duration_s": 28.033333333333335,
+    "cadence_tpm": 151.96195005945305,
+    "left_right_asymmetry": 0.014084507042253521,
+    "coordination_score": 98.59154929577466,
+    "submetrics": {
+      "ground_touches": {
+        "total_ground_touches": 0,
+        "left_ground_touches": 0,
+        "right_ground_touches": 0,
+        "ground_touch_percentage": 0.0,
+        "ground_touch_events": []
+      },
+      "ball_presence_detection": {
+        "ball_presence_percentage": 100.0,
+        "ball_visible_frames": 846,
+        "total_frames": 846
+      },
+      "ball_out_of_reach_analysis": {
+        "out_of_reach_count": 0,
+        "out_of_reach_percentage": 0.0,
+        "avg_recovery_time_s": 0.0,
+        "out_of_reach_events": []
+      }
+    }
+  },
+  "balance_and_stability_analysis": {
+    "com_ellipse_area_cm2": 13.872357679895293,
+    "com_ellipse_angle_deg": 87.827210111575,
+    "com_sway_variability_ap_cm": 5.1613255287500825,
+    "com_sway_variability_ml_cm": 0.855537704334192,
+    "com_exits_radius_count": 0,
+    "com_max_distance_m": 0.1163662362621323,
+    "com_avg_distance_m": 0.009949280153528951,
+    "com_vertical_range_m": 0.19465147345722156,
+    "com_oscillation_count": 115,
+    "balance_score_0_100": 100.0,
+    "com_ellipse_detail": {
+      "pca_eigenvectors": [
+        [0.03791325, 0.99928103],
+        [0.99928103, -0.03791325]
+      ],
+      "pca_eigenvalues": [0.000444655003, 0.0000122174055],
+      "pca_mean": [0.0000552087182, 0.00603532956]
+    }
+  },
+  "form_and_technique_analysis": {
+    "look_down_count": 8,
+    "look_down_total_time_s": 7.5,
+    "look_down_percentage": 26.595744680851062,
+    "look_down_frequency_per_min": 17.02127659574468,
+    "head_movement_score_0_100": 44.425370782228924,
+    "joint_angles": {
+      "left_knee_angle_deg": {
+        "mean": 9.182735837008257,
+        "std": 17.140409882642246,
+        "min": 0.03791442549339006,
+        "max": 176.70451456692228
+      },
+      "right_knee_angle_deg": {
+        "mean": 10.154984537557475,
+        "std": 18.18699260207163,
+        "min": 0.0023902809407834783,
+        "max": 173.44776236119444
+      }
+    },
+    "coordination_pattern": {
+      "coordination_x_in_phase_pct": 25.207100591715975,
+      "coordination_x_anti_phase_pct": 27.692307692307693,
+      "coordination_x_right_lead_pct": 24.142011834319526,
+      "coordination_x_left_lead_pct": 22.958579881656803,
+      "coordination_y_in_phase_pct": 29.585798816568047,
+      "coordination_y_anti_phase_pct": 31.952662721893493,
+      "coordination_y_right_lead_pct": 18.106508875739642,
+      "coordination_y_left_lead_pct": 20.355029585798817
+    },
+    "head_up_detail_score": {
+      "overall_score_0_100": 44.43,
+      "score_level": "needs_work",
+      "weighted_penalty": 0.5557,
+      "professional_reference": {
+        "n_events": 1.0,
+        "frequency_per_s": 0.0546448087431694,
+        "percentage_heads_down": 2.914389799635701,
+        "max_event_duration_s": 0.5333333333333333
+      },
+      "metric_details": [
+        {
+          "metric_name": "n_events",
+          "metric_description": "Number of heads down events",
+          "player_value": 8,
+          "professional_value": 1.0,
+          "deviation": 7.0,
+          "deviation_percentage": 700.0,
+          "weight": 0.1,
+          "feature_score_0_100": 24.659696394160648,
+          "deviation_level": "poor",
+          "needs_improvement": true
+        },
+        {
+          "metric_name": "percentage_heads_down",
+          "metric_description": "Percentage of time with head down",
+          "player_value": 26.595744680851062,
+          "professional_value": 2.914389799635701,
+          "deviation": 23.681354881215363,
+          "deviation_percentage": 812.5664893617022,
+          "weight": 0.45,
+          "feature_score_0_100": 30.60313460939197,
+          "deviation_level": "needs_improvement",
+          "needs_improvement": true
+        },
+        {
+          "metric_name": "max_event_duration",
+          "metric_description": "Maximum duration of a single heads down event",
+          "player_value": 2.1333333333333333,
+          "professional_value": 0.5333333333333333,
+          "deviation": 1.6,
+          "deviation_percentage": 300.0,
+          "weight": 0.2,
+          "feature_score_0_100": 61.878339180614084,
+          "deviation_level": "fair",
+          "needs_improvement": true
+        },
+        {
+          "metric_name": "frequency",
+          "metric_description": "Frequency of heads down events per second",
+          "player_value": 0.28368794326241137,
+          "professional_value": 0.0546448087431694,
+          "deviation": 0.22904313451924196,
+          "deviation_percentage": 419.14893617021283,
+          "weight": 0.25,
+          "feature_score_0_100": 63.24929092985467,
+          "deviation_level": "fair",
+          "needs_improvement": true
+        }
+      ],
+      "summary": {
+        "excellent_metrics": [],
+        "good_metrics": [],
+        "needs_improvement_metrics": ["n_events", "percentage_heads_down"]
+      }
+    }
+  },
+  "speed_agility_rhythm_analysis": {
+    "cadence_tpm": 151.96195005945305,
+    "left_cadence_tpm": 74.91082045184304,
+    "right_cadence_tpm": 77.05112960760998,
+    "avg_inter_touch_interval_s": 0.4004761904761905,
+    "std_inter_touch_interval_s": 0.2685938018374355,
+    "peak_frequency_hz": 1.1524822695035462,
+    "median_frequency_hz": 3.7588652482269507,
+    "spectral_entropy": 6.08215801346049,
+    "coordination_score_0_100": 98.59154929577466,
+    "cadence_score_0_100": 98.68549346016646,
+    "speed_score_0_100": 98.64791579440973,
+    "agility_score_0_100": 98.64791579440973
+  },
+  "power_analysis": {
+    "energy_expenditure_j": 3208.0484569350992,
+    "avg_power_output_watts": 113.76058357925884,
+    "energy_per_kg_j": 42.77397942580132,
+    "energy_per_touch": 0.6024504144479059,
+    "energy_efficiency_score_0_100": 89.75495855520941,
+    "power_score_0_100": 89.75495855520941,
+    "peak_velocities_mps": {
+      "com_peak_velocity_mps": 0.04696424440109505,
+      "com_avg_velocity_mps": 0.005602461544176529,
+      "left_ankle_peak_velocity_mps": 0.4358364518631411,
+      "right_ankle_peak_velocity_mps": 0.4388327720744962
+    }
+  },
+  "summary_scores_0_100": {
+    "ball_control": 98.6,
+    "balance": 100.0,
+    "heads_up": 44.4,
+    "cadence": 98.7,
+    "power": 89.8
+  }
+}
