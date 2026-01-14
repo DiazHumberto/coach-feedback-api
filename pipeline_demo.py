@@ -1,656 +1,702 @@
 #!/usr/bin/env python3
 """
 pipeline_demo.py
-
-Demo pipeline for U-Pro / coach-feedback prototype.
+----------------
+Demo pipeline for U-PRO "coach feedback" prototypes.
 
 Supports TWO input formats:
+1) Annotation JSON (from the Video Annotator tool)
+2) Session-output JSON (from the analytics pipeline / backend)
 
-1) Annotation export JSON (from the intern labeling tool)
-   - top-level key: "labels"
-   - positional labels: {type:"positional", name, frame, x, y}
-   - temporal labels:   {type:"temporal", name, startFrame, endFrame}
+What it does:
+- Parse input JSON
+- Compute / extract a compact set of metrics
+- Convert key metrics into 0–100 "scores" (where available)
+- Apply the U-PRO scoring rubric (bands: 1–20, 21–40, 41–60, 61–80, 81–100)
+- Optionally call an LLM to generate coach-style feedback
+- Optional LangSmith tracing (so your supervisor can see prompts/inputs)
 
-2) Session-output JSON (from the internal analysis engine)
-   - top-level keys like: "ball_control_analysis", "balance_and_stability_analysis",
-     "form_and_technique_analysis", "speed_agility_rhythm_analysis", etc.
+Run:
+  # Metrics only
+  python pipeline_demo.py --json data/01081001-2.json --fps 30 --age-band 9-12 --skill developmental --style mentor
 
-The pipeline outputs:
-- METRICS (normalized, JSON-safe)
-- optionally COACH FEEDBACK (structured JSON) using OpenAI API
+  # Metrics + coach feedback (LLM)
+  python pipeline_demo.py --json data/01081001-2.json --fps 30 --age-band 9-12 --skill developmental --style mentor --use-llm
 
-NOTE: This script is intentionally "prototype-friendly":
-- deterministic metrics/scoring in Python
-- LLM used only for phrasing + drill suggestions (mat-safe)
+Env (.env recommended):
+  OPENAI_API_KEY=...
+  OPENAI_MODEL=gpt-5.2
+
+  # LangSmith (optional)
+  LANGSMITH_API_KEY=...
+  LANGSMITH_TRACING=true
+  LANGSMITH_PROJECT=coach-feedback-api
+  LANGCHAIN_HIDE_INPUTS=false
+  LANGCHAIN_HIDE_OUTPUTS=false
 """
 
 from __future__ import annotations
 
 import argparse
-import ast
 import json
-import os
-import re
-from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple, Optional
-
-# Optional deps (annotation mode uses cv2 for homography; session mode does not require it)
-try:
-    import cv2  # type: ignore
-except Exception:
-    cv2 = None  # noqa
-
 import math
+import os
+import random
+from dataclasses import dataclass
+from typing import Any, Dict, List, Optional, Tuple
 
+# Optional: load .env automatically when running this script
 try:
     from dotenv import load_dotenv  # type: ignore
+    load_dotenv()
 except Exception:
-    load_dotenv = None  # noqa
+    pass
 
 
-# --------------------------
-# JSON loading (robust)
-# --------------------------
+# =============================================================================
+# Scoring rubric (0–100)
+# -----------------------------------------------------------------------------
+# Based on the "U-Pro Soccer - Metrics and Scoring Criteria" sheet:
+# Each metric uses a 5-band interpretation:
+#   1–20, 21–40, 41–60, 61–80, 81–100
+# NOTE: These are *descriptions*, not formulas. We apply them AFTER we have
+# a score in 0–100 from the analytics pipeline (or a proxy score in demos).
+# =============================================================================
 
-_NUMPY_FLOAT_RE = re.compile(r"np\.float\d*\(([^)]*)\)")
-_NUMPY_INT_RE = re.compile(r"np\.int\d*\(([^)]*)\)")
-_ARRAY_RE = re.compile(r"array\((\[[\s\S]*?\])\)")
+RUBRIC_BANDS: List[Tuple[int, int, str]] = [
+    (1, 20, "Needs improvement"),
+    (21, 40, "Below average"),
+    (41, 60, "Average"),
+    (61, 80, "Above average"),
+    (81, 100, "Excellent"),
+]
 
-def load_json_or_python_repr(path: str) -> Dict[str, Any]:
-    """
-    Load either:
-    - valid JSON
-    - or a Python dict/list repr that may include np.float64(...) and array([...])
+# Compact descriptions (kept short for LangSmith readability)
+UPRO_RUBRIC: Dict[str, Dict[str, str]] = {
+    "head_up": {
+        "1-20": "Player does not attempt to keep head up.",
+        "21-40": "Head up rarely; mainly looks down.",
+        "41-60": "Head up sometimes; still frequent head-down.",
+        "61-80": "Head up often; good awareness with occasional head-down.",
+        "81-100": "Head up consistently; strong awareness and decision-making.",
+    },
+    "ball_control": {
+        "1-20": "Touches are uncontrolled; ball is often lost.",
+        "21-40": "Some control but frequent mistakes; ball often escapes.",
+        "41-60": "Fair control; occasional ball loss; improving touch quality.",
+        "61-80": "Good control; ball mostly close; few mistakes.",
+        "81-100": "Excellent control; consistent, close touches and mastery.",
+    },
+    "technique_coordination": {
+        "1-20": "Struggles with technique; coordination is poor.",
+        "21-40": "Basic technique but inconsistent; coordination needs work.",
+        "41-60": "Acceptable technique; coordination improving.",
+        "61-80": "Good technique; coordinated movements with minor issues.",
+        "81-100": "Excellent technique and coordination; fluid, consistent form.",
+    },
+    "speed_agility": {
+        "1-20": "Very slow; difficulty changing tempo/direction.",
+        "21-40": "Slow and inconsistent; limited agility.",
+        "41-60": "Moderate speed; some agility; needs consistency.",
+        "61-80": "Good speed and responsiveness; agile with small improvements.",
+        "81-100": "Excellent speed/agility; quick reactions and smooth control.",
+    },
+    "balance_power": {
+        "1-20": "Very unstable; limited power/efficiency.",
+        "21-40": "Unstable at times; power output inconsistent.",
+        "41-60": "Reasonable balance; average power/efficiency.",
+        "61-80": "Good balance; solid power/efficiency.",
+        "81-100": "Excellent balance and controlled power; efficient movement.",
+    },
+    "effort_endurance": {
+        "1-20": "Low effort; poor endurance; stops frequently.",
+        "21-40": "Effort inconsistent; endurance needs improvement.",
+        "41-60": "Average effort; can complete drill with fatigue.",
+        "61-80": "Good sustained effort; strong endurance for age/level.",
+        "81-100": "Excellent effort and endurance; consistent intensity.",
+    },
+}
 
-    This is helpful because some "session outputs" are pasted/serialized from Python prints.
-    """
-    with open(path, "r", encoding="utf-8") as f:
-        raw = f.read()
+# =============================================================================
+# Mat-only drills (safety constraints)
+# =============================================================================
 
-    # 1) Try strict JSON first
+MAT_SAFE_DRILLS = {
+    "U8": [
+        "Toe taps (count to 10, rest, repeat)",
+        "Inside-inside touches (tiny touches, keep the ball close)",
+        "Sole stop + move (stop ball with sole, push gently to the other foot)",
+    ],
+    "9-12": [
+        "Metronome touches: side-to-side at a steady count (1-2-1-2) for 30s x 3",
+        "Toe taps ladder: 15s easy, 15s steady, 15s fast x 2 rounds",
+        "Inside touches square: 4 corners of the mat, light touches, keep rhythm",
+    ],
+    "13+": [
+        "Tempo control: 20s steady cadence + 10s faster cadence, repeat x 4",
+        "Weak-foot emphasis: 45s mostly weak-foot touches, keep ball centered",
+        "Rhythm reset: if rhythm breaks, slow down 3 touches then build back up",
+    ],
+}
+
+STYLE_HINTS = {
+    "cheer": "Very encouraging, simple, short sentences. One clear next step.",
+    "mentor": "Supportive and practical: 2 strengths, 2 improvements, 1 drill, 1 measurable goal.",
+    "performance": "Direct and metrics-focused. Mention numbers lightly. Clear priorities and targets.",
+}
+
+
+# =============================================================================
+# Utilities
+# =============================================================================
+
+def clamp(x: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, x))
+
+
+def to_float(x: Any, default: float = 0.0) -> float:
     try:
-        return json.loads(raw)
+        return float(x)
     except Exception:
-        pass
-
-    # 2) Try to sanitize common numpy prints and then literal_eval
-    sanitized = raw
-    sanitized = _NUMPY_FLOAT_RE.sub(r"\1", sanitized)
-    sanitized = _NUMPY_INT_RE.sub(r"\1", sanitized)
-    sanitized = _ARRAY_RE.sub(r"\1", sanitized)
-
-    # Some prints include "np.float64(100.0)" inside dicts with single quotes.
-    # literal_eval can parse that after sanitization.
-    try:
-        obj = ast.literal_eval(sanitized)
-    except Exception as e:
-        raise ValueError(
-            "Could not parse file as JSON or as a sanitized Python dict repr. "
-            "If this came from a printout, try exporting as JSON."
-        ) from e
-
-    if not isinstance(obj, dict):
-        raise ValueError("Expected top-level dict for session/annotation file.")
-    return obj
+        return default
 
 
-def to_json_safe(x: Any) -> Any:
-    """Convert numpy-like values, sets, tuples into JSON-safe Python types."""
-    # numpy scalars often have .item()
-    if hasattr(x, "item") and callable(getattr(x, "item")):
-        try:
-            return x.item()
-        except Exception:
-            pass
-
-    if isinstance(x, dict):
-        return {str(k): to_json_safe(v) for k, v in x.items()}
-    if isinstance(x, (list, tuple)):
-        return [to_json_safe(v) for v in x]
-    if isinstance(x, set):
-        return [to_json_safe(v) for v in sorted(list(x))]
-    return x
+def safe_div(a: float, b: float) -> float:
+    return a / b if b else 0.0
 
 
-# --------------------------
-# Input type detection
-# --------------------------
+def score_band(score_0_100: float) -> Tuple[str, str]:
+    """Return ('61-80', 'Above average') etc."""
+    s = int(round(clamp(score_0_100, 0, 100)))
+    if s == 0:
+        # allow 0 as "no attempt / no data"
+        return "1-20", "Needs improvement"
+    for lo, hi, label in RUBRIC_BANDS:
+        if lo <= s <= hi:
+            key = f"{lo}-{hi}"
+            return key, label
+    return "81-100", "Excellent"
 
-def detect_input_type(data: Dict[str, Any]) -> str:
-    # Annotation export format
-    if isinstance(data.get("labels"), list):
+
+def rubric_lookup(metric_key: str, score_0_100: float) -> Dict[str, Any]:
+    band_key, band_label = score_band(score_0_100)
+    desc = UPRO_RUBRIC.get(metric_key, {}).get(band_key, "")
+    return {
+        "score_0_100": round(clamp(score_0_100, 0, 100), 2),
+        "band": band_key,
+        "band_label": band_label,
+        "criteria": desc,
+    }
+
+
+def get_nested(d: Dict[str, Any], path: List[str], default: Any = None) -> Any:
+    cur: Any = d
+    for k in path:
+        if not isinstance(cur, dict) or k not in cur:
+            return default
+        cur = cur[k]
+    return cur
+
+
+# =============================================================================
+# Input detection & parsing
+# =============================================================================
+
+def load_json(path: str) -> Dict[str, Any]:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def identify_input_format(data: Dict[str, Any]) -> str:
+    """
+    Returns:
+      - "annotation" for Video Annotator JSON
+      - "session_output" for analytics/session output JSON
+    """
+    # Annotation JSON typically has 'labels' or 'events' and 'video' metadata
+    if any(k in data for k in ["labels", "events", "video", "temporal_labels", "positional_labels"]):
         return "annotation"
-    # Session output format
-    if any(k in data for k in ("ball_control_analysis", "summary_scores_0_100", "form_and_technique_analysis")):
-        return "session"
-    return "unknown"
+    # Session output typically has drill_id / session_id / profile_id, or nested analysis blocks
+    if any(k in data for k in ["session_id", "profile_id", "drill_id", "ball_control_analysis", "head_up_analysis"]):
+        return "session_output"
+    # Fallback: try best guess by structure
+    return "annotation"
 
 
-# --------------------------
-# Annotation mode: metrics
-# --------------------------
+# =============================================================================
+# Annotation JSON -> demo metrics
+# =============================================================================
 
-@dataclass
-class CornerSet:
-    tl: Tuple[float, float]
-    tr: Tuple[float, float]
-    br: Tuple[float, float]
-    bl: Tuple[float, float]
-
-
-def _extract_corners(labels: List[Dict[str, Any]]) -> Optional[CornerSet]:
-    """Extract corners from positional labels (Corner 1..4 of Mat)."""
-    pts: Dict[str, Tuple[float, float]] = {}
-    for l in labels:
-        if l.get("type") != "positional":
-            continue
-        name = l.get("name")
-        if name in ("Corner 1 of Mat", "Corner 2 of Mat", "Corner 3 of Mat", "Corner 4 of Mat"):
-            pts[name] = (float(l["x"]), float(l["y"]))
-
-    needed = ["Corner 1 of Mat", "Corner 2 of Mat", "Corner 3 of Mat", "Corner 4 of Mat"]
-    if not all(n in pts for n in needed):
-        return None
-
-    # User confirmed: 1=TL, 2=TR, 3=BR, 4=BL
-    return CornerSet(
-        tl=pts["Corner 1 of Mat"],
-        tr=pts["Corner 2 of Mat"],
-        br=pts["Corner 3 of Mat"],
-        bl=pts["Corner 4 of Mat"],
-    )
+def _extract_temporal_events(annotation: Dict[str, Any]) -> List[Dict[str, Any]]:
+    # Support multiple schemas: "events" or "labels" etc.
+    if isinstance(annotation.get("events"), list):
+        return annotation["events"]
+    if isinstance(annotation.get("labels"), list):
+        # Some tools store temporal labels in labels[] with timestamps
+        return annotation["labels"]
+    return []
 
 
-def _extract_ball_track(labels: List[Dict[str, Any]]) -> List[Tuple[int, float, float]]:
-    track = []
-    for l in labels:
-        if l.get("type") == "positional" and l.get("name") == "Ball Position":
-            track.append((int(l["frame"]), float(l["x"]), float(l["y"])))
-    track.sort(key=lambda t: t[0])
-    return track
-
-
-def _extract_events(labels: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    events = []
-    for l in labels:
-        if l.get("type") == "temporal":
-            events.append(l)
-    return events
-
-
-def _estimate_duration_s(labels: List[Dict[str, Any]], fps: float) -> float:
-    max_frame = 0
-    for l in labels:
-        if l.get("type") == "positional":
-            max_frame = max(max_frame, int(l.get("frame", 0)))
-        elif l.get("type") == "temporal":
-            max_frame = max(max_frame, int(l.get("endFrame", 0)))
-    # Include frame 0 -> frame max inclusive => (max_frame+1)/fps
-    return float(max_frame + 1) / float(fps)
-
-
-def _count_event_name(events: List[Dict[str, Any]], name: str) -> int:
-    return sum(1 for e in events if e.get("name") == name)
-
-
-def _lr_balance_score(left: int, right: int) -> float:
-    total = left + right
-    if total <= 0:
-        return 0.0
-    return 1.0 - abs(left - right) / total
-
-
-def _touch_mid_frames(events: List[Dict[str, Any]]) -> List[int]:
-    frames = []
+def _count_events(events: List[Dict[str, Any]]) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
     for e in events:
-        if e.get("name") in ("Left Ball touch", "Right Ball touch"):
-            s = int(e.get("startFrame", 0))
-            t = int(e.get("endFrame", s))
-            frames.append((s + t) // 2)
-    frames.sort()
-    return frames
+        name = e.get("label") or e.get("name") or e.get("type") or "unknown"
+        counts[name] = counts.get(name, 0) + 1
+    return counts
 
 
-def _rhythm_score_from_touches(touch_frames: List[int], fps: float) -> float:
+def _estimate_duration_seconds(events: List[Dict[str, Any]], fps: float) -> float:
     """
-    Simple rhythm score:
-    - compute inter-touch intervals (seconds)
-    - score = 1 - (std / (mean + eps)), clamped to [0,1]
+    Best-effort: if events contain frame indices or timestamps, estimate duration.
+    Otherwise, fallback to touches / fps heuristic.
     """
-    if len(touch_frames) < 6:
-        return 0.0
-    intervals = []
-    for a, b in zip(touch_frames, touch_frames[1:]):
-        dt = (b - a) / fps
-        if 0.05 <= dt <= 2.5:
-            intervals.append(dt)
-    if len(intervals) < 5:
-        return 0.0
-    mean = sum(intervals) / len(intervals)
-    var = sum((x - mean) ** 2 for x in intervals) / len(intervals)
-    std = math.sqrt(var)
-    score = 1.0 - (std / (mean + 1e-6))
-    return float(max(0.0, min(1.0, score)))
+    # try timestamps in seconds
+    t0 = None
+    t1 = None
+    for e in events:
+        t = e.get("t") or e.get("time") or e.get("timestamp")
+        if isinstance(t, (int, float)):
+            t0 = t if t0 is None else min(t0, t)
+            t1 = t if t1 is None else max(t1, t)
+    if t0 is not None and t1 is not None and t1 >= t0:
+        return float(t1 - t0)
+
+    # try frames
+    f0 = None
+    f1 = None
+    for e in events:
+        fr = e.get("frame") or e.get("start_frame") or e.get("end_frame")
+        if isinstance(fr, int):
+            f0 = fr if f0 is None else min(f0, fr)
+            f1 = fr if f1 is None else max(f1, fr)
+    if f0 is not None and f1 is not None and f1 >= f0 and fps:
+        return float(f1 - f0) / float(fps)
+
+    # fallback heuristic
+    return 0.0
 
 
-def _homography_pixel_to_unit(corners: CornerSet) -> Optional[Any]:
-    """Return 3x3 transform H mapping pixel -> unit square coords."""
-    if cv2 is None:
-        return None
+def compute_metrics_from_annotations(annotation: Dict[str, Any], fps: float) -> Dict[str, Any]:
+    events = _extract_temporal_events(annotation)
+    counts = _count_events(events)
 
-    import numpy as np  # local import so script still loads without numpy errors elsewhere
+    left = counts.get("Left Ball touch", 0) + counts.get("Left ball touch", 0) + counts.get("left_touch", 0)
+    right = counts.get("Right Ball touch", 0) + counts.get("Right ball touch", 0) + counts.get("right_touch", 0)
+    toe = counts.get("Toe tap event", 0) + counts.get("Toe taps", 0) + counts.get("toe_tap", 0)
 
-    src = np.array([corners.tl, corners.tr, corners.br, corners.bl], dtype=np.float32)
-    dst = np.array([(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)], dtype=np.float32)
-    H = cv2.getPerspectiveTransform(src, dst)
-    return H
-
-
-def _normalize_track_to_unit(track: List[Tuple[int, float, float]], H: Any) -> List[Tuple[int, float, float]]:
-    """Apply homography to track; returns (frame, u, v)."""
-    import numpy as np
-
-    if not track:
-        return []
-    pts = np.array([[x, y] for _, x, y in track], dtype=np.float32).reshape(-1, 1, 2)
-    uv = cv2.perspectiveTransform(pts, H).reshape(-1, 2)  # type: ignore
-    out = []
-    for (frame, _, _), (u, v) in zip(track, uv):
-        out.append((frame, float(u), float(v)))
-    return out
-
-
-def _speed_stats(track_uv: List[Tuple[int, float, float]], fps: float) -> Dict[str, float]:
-    if len(track_uv) < 3:
-        return {"ball_avg_speed": 0.0, "ball_max_speed": 0.0, "ball_speed_spikiness": 0.0}
-
-    speeds = []
-    for (f1, u1, v1), (f2, u2, v2) in zip(track_uv, track_uv[1:]):
-        dt = (f2 - f1) / fps
-        if dt <= 0:
-            continue
-        dist = math.sqrt((u2 - u1) ** 2 + (v2 - v1) ** 2)
-        speeds.append(dist / dt)
-
-    if not speeds:
-        return {"ball_avg_speed": 0.0, "ball_max_speed": 0.0, "ball_speed_spikiness": 0.0}
-
-    avg = sum(speeds) / len(speeds)
-    mx = max(speeds)
-    var = sum((s - avg) ** 2 for s in speeds) / len(speeds)
-    std = math.sqrt(var)
-    spiky = std / (avg + 1e-6)
-    return {"ball_avg_speed": float(avg), "ball_max_speed": float(mx), "ball_speed_spikiness": float(spiky)}
-
-
-def compute_metrics_from_annotation(data: Dict[str, Any], fps: float) -> Dict[str, Any]:
-    labels = data.get("labels", [])
-    if not isinstance(labels, list):
-        raise ValueError("Annotation input must have a list under 'labels'.")
-
-    corners = _extract_corners(labels)
-    track = _extract_ball_track(labels)
-    events = _extract_events(labels)
-
-    duration_s = _estimate_duration_s(labels, fps)
-    left = _count_event_name(events, "Left Ball touch")
-    right = _count_event_name(events, "Right Ball touch")
-    toe = _count_event_name(events, "Toe tap event")
     touches = left + right
+    duration_s = _estimate_duration_seconds(events, fps)
 
-    touches_per_min = (touches / duration_s) * 60.0 if duration_s > 0 else 0.0
-    toe_per_min = (toe / duration_s) * 60.0 if duration_s > 0 else 0.0
+    # If duration is unknown, approximate from frames in filename metadata or touches rate.
+    if duration_s <= 0 and fps > 0:
+        # crude heuristic: assume ~2.2 touches/sec if we have touch events
+        duration_s = safe_div(touches, 2.2)
 
-    lr_balance = _lr_balance_score(left, right)
+    touches_per_min = safe_div(touches, duration_s) * 60.0
+    toe_taps_per_min = safe_div(toe, duration_s) * 60.0
 
-    touch_mid = _touch_mid_frames(events)
-    rhythm = _rhythm_score_from_touches(touch_mid, fps)
+    # Demo "scores" (0–1) derived from simple heuristics
+    lr_balance_score = 1.0 - (abs(left - right) / touches) if touches else 0.0
+    lr_balance_score = clamp(lr_balance_score, 0.0, 1.0)
 
-    # Heads-up in annotation mode depends on labels you may not have.
-    # If you do not label head-down events, we keep it at 1.0 (neutral/high).
-    heads_up = 1.0
+    # heads_up_score: from Look down counts if present, else assume good (demo)
+    look_down = counts.get("Look down", 0) + counts.get("look_down", 0)
+    # penalty: each look-down counts as ~0.15 in this toy demo
+    heads_up_score = clamp(1.0 - 0.15 * look_down, 0.0, 1.0)
 
-    ball_stats = {"ball_avg_speed": 0.0, "ball_max_speed": 0.0, "ball_speed_spikiness": 0.0}
-    if corners and track and cv2 is not None:
-        H = _homography_pixel_to_unit(corners)
-        if H is not None:
-            track_uv = _normalize_track_to_unit(track, H)
-            ball_stats = _speed_stats(track_uv, fps)
+    # rhythm_score: use variability proxy if we have enough events; else 0.5
+    rhythm_score = 0.5 if touches >= 10 else 0.0
 
-    # ball_control_score: simple prototype combination (lower spikiness => better)
-    spiky = float(ball_stats["ball_speed_spikiness"])
-    ball_control_score = float(max(0.0, min(1.0, 1.0 - (spiky / 1.2))))  # heuristic scale
+    # ball_control_score: proxy using spikiness if present (not available => use balance)
+    ball_control_score = clamp(0.5 + 0.5 * lr_balance_score, 0.0, 1.0)
 
+    # Output
     metrics = {
-        "input_type": "annotation",
         "duration_s_est": duration_s,
         "touches": touches,
         "left_touches": left,
         "right_touches": right,
         "touches_per_min": touches_per_min,
         "toe_taps": toe,
-        "toe_taps_per_min": toe_per_min,
-        "lr_balance_score": lr_balance,
-        "heads_up_score": heads_up,
-        "rhythm_score": rhythm,
-        **ball_stats,
+        "toe_taps_per_min": toe_taps_per_min,
+
+        # 0–1 "demo scores"
+        "lr_balance_score": lr_balance_score,
+        "heads_up_score": heads_up_score,
+        "rhythm_score": rhythm_score,
         "ball_control_score": ball_control_score,
-        "event_counts": {
-            "Left Ball touch": left,
-            "Right Ball touch": right,
-            "Toe tap event": toe,
-        },
+
+        "event_counts": counts,
     }
-    return metrics
+
+    # Scorecard using rubric (0–100)
+    scorecard = {
+        "head_up": rubric_lookup("head_up", heads_up_score * 100),
+        "ball_control": rubric_lookup("ball_control", ball_control_score * 100),
+        "technique_coordination": rubric_lookup("technique_coordination", ((lr_balance_score + rhythm_score) / 2) * 100),
+        "speed_agility": rubric_lookup("speed_agility", clamp(touches_per_min / 180.0, 0, 1) * 100),
+    }
+
+    return {"metrics": metrics, "scorecard": scorecard}
 
 
-# --------------------------
-# Session-output mode: adapt
-# --------------------------
+# =============================================================================
+# Session-output JSON -> extracted metrics + rubric
+# =============================================================================
 
-def _get_nested(d: Dict[str, Any], path: List[str], default: Any = None) -> Any:
-    cur: Any = d
-    for p in path:
-        if not isinstance(cur, dict) or p not in cur:
-            return default
-        cur = cur[p]
-    return cur
+@dataclass
+class SessionExtract:
+    session_id: Optional[int] = None
+    profile_id: Optional[int] = None
+    drill_id: Optional[int] = None
+    duration_s: Optional[float] = None
+
+    # Ball control sub-metrics
+    total_touches: Optional[int] = None
+    left_touches: Optional[int] = None
+    right_touches: Optional[int] = None
+
+    ground_touch_percentage: Optional[float] = None
+    ball_presence_percentage: Optional[float] = None
+    ball_out_of_reach_count: Optional[int] = None
+    avg_recovery_time_s: Optional[float] = None
+
+    # Scores (0–100 if available)
+    head_up_score_0_100: Optional[float] = None
+    ball_control_score_0_100: Optional[float] = None
+    technique_score_0_100: Optional[float] = None
+    coordination_score_0_100: Optional[float] = None
+    speed_score_0_100: Optional[float] = None
+    agility_score_0_100: Optional[float] = None
+    balance_score_0_100: Optional[float] = None
+    power_score_0_100: Optional[float] = None
+    endurance_score_0_100: Optional[float] = None
 
 
 def compute_metrics_from_session_output(data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Adapt a session-output dict into the same "headline metrics" schema used by the pipeline.
+    Extract a compact subset of metrics (per supervisor feedback: avoid too many totals/percentages).
+    We keep:
+      - Touches (left/right)
+      - Ground touch percentage
+      - Ball presence percentage
+      - Out-of-reach count + average recovery time
+      - Summary scores (0–100) if provided by upstream analytics
     """
+    s = SessionExtract()
+
+    # IDs
+    s.session_id = data.get("session_id")
+    s.profile_id = data.get("profile_id")
+    s.drill_id = data.get("drill_id")
+
     # Duration
-    fps = _get_nested(data, ["video", "fps"], None)
-    duration_s = (
-        _get_nested(data, ["video", "duration_s"], None)
-        or _get_nested(data, ["ball_control_analysis", "duration_s"], None)
+    s.duration_s = to_float(
+        data.get("duration_s")
+        or get_nested(data, ["ball_control_analysis", "duration_s"])
+        or get_nested(data, ["ball_control_analysis", "duration_s_est"]),
+        default=0.0,
     )
-    if duration_s is None and fps is not None:
-        nframes = _get_nested(data, ["video", "num_frames"], 0)
-        duration_s = float(nframes) / float(fps) if nframes else None
-    duration_s = float(duration_s) if duration_s is not None else 0.0
 
-    # Ball control
-    bc = data.get("ball_control_analysis", {}) if isinstance(data.get("ball_control_analysis"), dict) else {}
-    touches = int(bc.get("total_touches", 0) or 0)
-    left = int(bc.get("left_touches", 0) or 0)
-    right = int(bc.get("right_touches", 0) or 0)
+    # Ball control analysis block (supports a few possible key styles)
+    bc = data.get("ball_control_analysis") or data.get("ballControlAnalysis") or {}
+    if not isinstance(bc, dict):
+        bc = {}
 
-    # Cadence (touches per minute)
-    cadence_tpm = bc.get("cadence_tpm", None)
-    if cadence_tpm is None and duration_s > 0:
-        cadence_tpm = (touches / duration_s) * 60.0
-    cadence_tpm = float(cadence_tpm or 0.0)
+    s.total_touches = int(bc.get("total_touches") or bc.get("touches") or data.get("total_touches") or 0)
+    s.left_touches = int(bc.get("left_touches") or data.get("left_touches") or 0)
+    s.right_touches = int(bc.get("right_touches") or data.get("right_touches") or 0)
 
-    lr_balance = _lr_balance_score(left, right)
-
-    # Heads up
-    # Prefer explicit summary_scores_0_100.heads_up if present
-    heads_up_0_100 = (
-        _get_nested(data, ["summary_scores_0_100", "heads_up"], None)
-        or _get_nested(data, ["form_and_technique_analysis", "head_movement_score_0_100"], None)
-        or _get_nested(data, ["form_and_technique_analysis", "head_up_detail_score", "overall_score_0_100"], None)
+    # Ground touch %
+    s.ground_touch_percentage = to_float(
+        bc.get("ground_touch_percentage")
+        or get_nested(bc, ["ground_touches", "ground_touch_percentage"])
+        or get_nested(data, ["ground_touches", "ground_touch_percentage"]),
+        default=0.0,
     )
-    heads_up_score = float(heads_up_0_100) / 100.0 if heads_up_0_100 is not None else 0.0
 
-    # Balance
-    balance_0_100 = (
-        _get_nested(data, ["summary_scores_0_100", "balance"], None)
-        or _get_nested(data, ["balance_and_stability_analysis", "balance_score_0_100"], None)
+    # Ball presence %
+    s.ball_presence_percentage = to_float(
+        bc.get("ball_presence_percentage")
+        or get_nested(bc, ["ball_presence_detection", "ball_presence_percentage"])
+        or get_nested(data, ["ball_presence_detection", "ball_presence_percentage"]),
+        default=0.0,
     )
-    balance_score = float(balance_0_100) / 100.0 if balance_0_100 is not None else 0.0
 
-    # Ball control score (0..1)
-    bc_0_100 = _get_nested(data, ["summary_scores_0_100", "ball_control"], None)
-    ball_control_score = float(bc_0_100) / 100.0 if bc_0_100 is not None else 0.0
+    # Out of reach count + recovery time
+    s.ball_out_of_reach_count = int(
+        bc.get("ball_out_of_reach_count")
+        or get_nested(bc, ["ball_out_of_reach_analysis", "out_of_reach_count"])
+        or get_nested(data, ["ball_out_of_reach_analysis", "out_of_reach_count"])
+        or 0
+    )
+    s.avg_recovery_time_s = to_float(
+        bc.get("avg_recovery_time_s")
+        or get_nested(bc, ["ball_out_of_reach_analysis", "avg_recovery_time_s"])
+        or get_nested(data, ["ball_out_of_reach_analysis", "avg_recovery_time_s"]),
+        default=0.0,
+    )
 
-    # Rhythm: use "cadence_score_0_100" (proxy) if present
-    cadence_score_0_100 = _get_nested(data, ["speed_agility_rhythm_analysis", "cadence_score_0_100"], None)
-    rhythm_score = float(cadence_score_0_100) / 100.0 if cadence_score_0_100 is not None else 0.0
+    # Summary score block (0–100) – upstream may provide these already
+    # We support:
+    #  - data["summary_scores_0_100"]
+    #  - data["scores"]
+    #  - nested: head_up_detailed_score.overall_score, etc.
+    score_block = data.get("summary_scores_0_100") or data.get("scores") or {}
+    if not isinstance(score_block, dict):
+        score_block = {}
 
-    # Extras
-    look_down_pct = _get_nested(data, ["form_and_technique_analysis", "look_down_percentage"], None)
-    look_down_pct = float(look_down_pct) if look_down_pct is not None else None
+    s.head_up_score_0_100 = to_float(
+        score_block.get("head_up")
+        or get_nested(data, ["head_up_detailed_score", "overall_score"])
+        or get_nested(data, ["head_up_score", "overall_score"]),
+        default=0.0,
+    )
+    s.ball_control_score_0_100 = to_float(score_block.get("ball_control"), default=0.0)
+    s.technique_score_0_100 = to_float(score_block.get("technique"), default=0.0)
+    s.coordination_score_0_100 = to_float(score_block.get("coordination"), default=0.0)
+    s.speed_score_0_100 = to_float(score_block.get("speed"), default=0.0)
+    s.agility_score_0_100 = to_float(score_block.get("agility"), default=0.0)
+    s.balance_score_0_100 = to_float(score_block.get("balance"), default=0.0)
+    s.power_score_0_100 = to_float(score_block.get("power"), default=0.0)
+    s.endurance_score_0_100 = to_float(score_block.get("endurance"), default=0.0)
 
-    ball_presence_pct = _get_nested(data, ["ball_control_analysis", "submetrics", "ball_presence_detection", "ball_presence_percentage"], None)
-    ball_presence_pct = float(ball_presence_pct) if ball_presence_pct is not None else None
+    extracted = {
+        "session_id": s.session_id,
+        "profile_id": s.profile_id,
+        "drill_id": s.drill_id,
+        "duration_s": s.duration_s,
 
-    out_reach_pct = _get_nested(data, ["ball_control_analysis", "submetrics", "ball_out_of_reach_analysis", "out_of_reach_percentage"], None)
-    out_reach_pct = float(out_reach_pct) if out_reach_pct is not None else None
+        # Ball control (compact)
+        "touches": {
+            "total_touches": s.total_touches,
+            "left_touches": s.left_touches,
+            "right_touches": s.right_touches,
+        },
+        "ground_touch_percentage": s.ground_touch_percentage,
+        "ball_presence_percentage": s.ball_presence_percentage,
+        "ball_out_of_reach": {
+            "count": s.ball_out_of_reach_count,
+            "avg_recovery_time_s": s.avg_recovery_time_s,
+        },
 
-    metrics = {
-        "input_type": "session",
-        "duration_s_est": duration_s,
-        "touches": touches,
-        "left_touches": left,
-        "right_touches": right,
-        "touches_per_min": cadence_tpm,
-        "lr_balance_score": lr_balance,
-        "heads_up_score": heads_up_score,
-        "balance_score": balance_score,
-        "rhythm_score": rhythm_score,
-        "ball_control_score": ball_control_score,
-        "look_down_percentage": look_down_pct,
-        "ball_presence_percentage": ball_presence_pct,
-        "ball_out_of_reach_percentage": out_reach_pct,
-        "raw_summary_scores_0_100": to_json_safe(_get_nested(data, ["summary_scores_0_100"], {})),
+        # Scores (if available)
+        "scores_0_100": {
+            "head_up": s.head_up_score_0_100,
+            "ball_control": s.ball_control_score_0_100,
+            "technique": s.technique_score_0_100,
+            "coordination": s.coordination_score_0_100,
+            "speed": s.speed_score_0_100,
+            "agility": s.agility_score_0_100,
+            "balance": s.balance_score_0_100,
+            "power": s.power_score_0_100,
+            "endurance": s.endurance_score_0_100,
+        },
     }
-    return metrics
+
+    # Scorecard via rubric (only include metrics that have a non-zero value)
+    scorecard: Dict[str, Any] = {}
+
+    if s.head_up_score_0_100 and s.head_up_score_0_100 > 0:
+        scorecard["head_up"] = rubric_lookup("head_up", s.head_up_score_0_100)
+    if s.ball_control_score_0_100 and s.ball_control_score_0_100 > 0:
+        scorecard["ball_control"] = rubric_lookup("ball_control", s.ball_control_score_0_100)
+
+    # Combine technique + coordination if both exist; else use whichever exists
+    tc = 0.0
+    tc_n = 0
+    for v in [s.technique_score_0_100, s.coordination_score_0_100]:
+        if v and v > 0:
+            tc += float(v)
+            tc_n += 1
+    if tc_n:
+        scorecard["technique_coordination"] = rubric_lookup("technique_coordination", tc / tc_n)
+
+    # Speed/agility
+    sa = 0.0
+    sa_n = 0
+    for v in [s.speed_score_0_100, s.agility_score_0_100]:
+        if v and v > 0:
+            sa += float(v)
+            sa_n += 1
+    if sa_n:
+        scorecard["speed_agility"] = rubric_lookup("speed_agility", sa / sa_n)
+
+    # Balance/power
+    bp = 0.0
+    bp_n = 0
+    for v in [s.balance_score_0_100, s.power_score_0_100]:
+        if v and v > 0:
+            bp += float(v)
+            bp_n += 1
+    if bp_n:
+        scorecard["balance_power"] = rubric_lookup("balance_power", bp / bp_n)
+
+    # Effort/endurance (if present)
+    if s.endurance_score_0_100 and s.endurance_score_0_100 > 0:
+        scorecard["effort_endurance"] = rubric_lookup("effort_endurance", s.endurance_score_0_100)
+
+    return {"metrics": extracted, "scorecard": scorecard}
 
 
-# --------------------------
-# Scoring interpretation
-# --------------------------
+# =============================================================================
+# LLM coach feedback (OpenAI + optional LangSmith)
+# =============================================================================
 
-def clamp01(x: float) -> float:
-    return float(max(0.0, min(1.0, x)))
+def truthy_env(name: str) -> bool:
+    v = (os.getenv(name) or "").strip().lower()
+    return v in {"1", "true", "yes", "y", "on"}
 
 
-def interpret_strengths_and_focus(metrics: Dict[str, Any]) -> Tuple[List[str], List[str]]:
+def get_openai_client():
     """
-    Simple rule: take a shortlist of key scores, pick top 2 and bottom 2.
-    (This keeps LLM prompt stable and deterministic.)
+    Returns an OpenAI client, optionally wrapped for LangSmith tracing.
     """
-    key_scores = {
-        "Ball control": float(metrics.get("ball_control_score", 0.0) or 0.0),
-        "Heads up": float(metrics.get("heads_up_score", 0.0) or 0.0),
-        "Rhythm": float(metrics.get("rhythm_score", 0.0) or 0.0),
-        "Left/right balance": float(metrics.get("lr_balance_score", 0.0) or 0.0),
-    }
-    # Include balance if available
-    if "balance_score" in metrics and metrics["balance_score"] is not None:
-        key_scores["Balance"] = float(metrics.get("balance_score", 0.0) or 0.0)
+    from openai import OpenAI  # type: ignore
 
-    ranked = sorted(key_scores.items(), key=lambda kv: kv[1], reverse=True)
-    strengths = [k for k, _ in ranked[:2]]
-    focus = [k for k, _ in ranked[-2:]]
-    return strengths, focus
-
-
-# --------------------------
-# LLM Coach feedback
-# --------------------------
-
-MAT_SAFE_DRILLS = {
-    "U8": [
-        "Toe taps (count to 10, rest, repeat)",
-        "Inside-inside touches (tiny touches, keep the ball close)",
-        "Sole stop + move (stop ball with sole, push gently to the other foot)"
-    ],
-    "9-12": [
-        "Metronome touches: side-to-side at a steady count (1-2-1-2) for 30s x 3",
-        "Toe taps ladder: 15s easy, 15s steady, 15s fast x 2 rounds",
-        "Inside touches square: 4 corners of the mat, light touches, keep rhythm"
-    ],
-    "13+": [
-        "Tempo control: 20s steady cadence + 10s faster cadence, repeat x 4",
-        "Weak-foot emphasis: 45s mostly weak-foot touches, keep ball centered",
-        "Rhythm reset: if rhythm breaks, slow down 3 touches then build back up"
-    ]
-}
-
-STYLE_HINTS = {
-    "cheer": "Very encouraging, simple, short sentences. Emphasize effort and one clear next step.",
-    "mentor": "Supportive and practical. 2 strengths, 2 improvements, 1 drill, 1 measurable goal.",
-    "performance": "Direct and metrics-focused. Mention numbers lightly. Clear priorities and targets."
-}
-
-def generate_coach_feedback_llm(
-    metrics: Dict[str, Any],
-    age_band: str,
-    skill: str,
-    style: str,
-    model: Optional[str] = None,
-) -> Dict[str, Any]:
-    """
-    Calls OpenAI Chat Completions API and requests STRICT JSON output.
-    """
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        raise RuntimeError("OPENAI_API_KEY not set. Add it to your environment or .env file.")
-
-    # Load dotenv if available and user uses .env
-    if load_dotenv is not None:
-        load_dotenv(override=False)
-
-    try:
-        from openai import OpenAI  # type: ignore
-    except Exception as e:
-        raise RuntimeError("openai package not installed. Run: pip install openai") from e
+        raise RuntimeError("OPENAI_API_KEY is not set. Put it in your .env file.")
 
     client = OpenAI(api_key=api_key)
 
-    strengths, focus = interpret_strengths_and_focus(metrics)
-    drill_options = MAT_SAFE_DRILLS.get(age_band, MAT_SAFE_DRILLS["9-12"])
+    # Optional: LangSmith trace wrapper (lets you see prompts/inputs/outputs)
+    # Requires: pip install langsmith
+    # And env vars:
+    #   LANGSMITH_API_KEY, LANGSMITH_TRACING=true
+    if truthy_env("LANGSMITH_TRACING") and os.getenv("LANGSMITH_API_KEY"):
+        try:
+            from langsmith.wrappers import wrap_openai  # type: ignore
+            client = wrap_openai(client)
+        except Exception:
+            # If wrapper not available, still run without tracing
+            pass
 
+    return client
+
+
+def select_mat_drill(age_band: str) -> str:
+    key = age_band
+    if age_band.strip().lower() in {"u8", "under 8", "8"}:
+        key = "U8"
+    elif age_band.strip() in {"9-12", "9–12"}:
+        key = "9-12"
+    elif age_band.strip() in {"13+", "13", "14+", "15+"}:
+        key = "13+"
+    pool = MAT_SAFE_DRILLS.get(key, MAT_SAFE_DRILLS["9-12"])
+    return random.choice(pool)
+
+
+def build_prompt(
+    metrics_block: Dict[str, Any],
+    scorecard: Dict[str, Any],
+    age_band: str,
+    skill: str,
+    style: str,
+) -> Tuple[str, str]:
     system = (
         "You are a youth soccer training assistant. "
         "You must ONLY suggest drills that can be done on a 4x4 feet training mat. "
         "Do NOT suggest jogging, passing, shooting, or long-space dribbling. "
-        "Keep it safe and age-appropriate."
+        "Keep it safe and age-appropriate. "
+        "Output MUST be valid JSON with keys: praise, strengths, improvements, drill, next_goal."
     )
 
+    style_hint = STYLE_HINTS.get(style, STYLE_HINTS["mentor"])
+
     user = {
-        "task": "Generate coach feedback as STRICT JSON.",
-        "player_profile": {"age_band": age_band, "skill_level": skill},
-        "coach_style": style,
-        "style_hint": STYLE_HINTS.get(style, STYLE_HINTS["mentor"]),
-        "constraints": {
-            "environment": "4x4_ft_mat_only",
-            "allowed_drill_examples": drill_options,
-            "must_not_include": ["jogging", "running", "passing", "shooting", "kicking drills", "large-space dribbling"],
+        "context": {
+            "age_band": age_band,
+            "skill_level": skill,
+            "style": style,
+            "style_hint": style_hint,
         },
-        "metrics": metrics,
-        "computed_summary": {"strengths": strengths, "focus": focus},
-        "required_json_schema": {
-            "praise": "string",
-            "strengths": ["string", "string"],
-            "improvements": ["string", "string"],
-            "drill": "string (mat-safe)",
-            "next_goal": "string (measurable, next session)"
-        }
+        "metrics": metrics_block,
+        "scorecard": scorecard,
+        "constraints": {
+            "mat_only": True,
+            "space": "4x4 feet",
+            "no_kicking_passing_shooting": True,
+        },
     }
 
-    if model is None:
-        model = os.getenv("OPENAI_MODEL", "gpt-5.2")
+    return system, json.dumps(user, ensure_ascii=False)
 
-    # Prefer response_format JSON if supported
+
+def call_llm_for_feedback(
+    metrics_block: Dict[str, Any],
+    scorecard: Dict[str, Any],
+    age_band: str,
+    skill: str,
+    style: str,
+) -> Dict[str, Any]:
+    client = get_openai_client()
+    model = os.getenv("OPENAI_MODEL", "gpt-5.2")
+
+    system, user = build_prompt(metrics_block, scorecard, age_band, skill, style)
+
+    resp = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        temperature=0.6,
+    )
+
+    text = resp.choices[0].message.content or ""
+    # Best effort: parse JSON from model output
     try:
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": json.dumps(user)},
-            ],
-            temperature=0.4,
-            response_format={"type": "json_object"},
-        )
-        text = resp.choices[0].message.content or "{}"
         return json.loads(text)
     except Exception:
-        # Fallback: ask without response_format and parse as JSON
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system},
-                {"role": "user", "content": "Return ONLY valid JSON for the following:\n" + json.dumps(user)},
-            ],
-            temperature=0.4,
-        )
-        text = resp.choices[0].message.content or "{}"
-        # try best-effort parse
-        try:
-            return json.loads(text)
-        except Exception:
-            # Attempt to extract JSON object from text
-            m = re.search(r"\{[\s\S]*\}", text)
-            if m:
-                return json.loads(m.group(0))
-            raise RuntimeError("LLM did not return valid JSON.")
+        return {"raw_text": text}
 
 
-# --------------------------
+# =============================================================================
 # CLI
-# --------------------------
+# =============================================================================
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Coach feedback pipeline demo (annotation or session-output input).")
-    parser.add_argument("--json", required=True, help="Path to input file (annotation JSON or session-output JSON).")
-    parser.add_argument("--fps", type=float, default=30.0, help="FPS (annotation mode). Ignored in session mode if video.fps exists.")
-    parser.add_argument("--age-band", dest="age_band", default="9-12", choices=["U8", "9-12", "13+"], help="Player age band.")
-    parser.add_argument("--skill", default="developmental", choices=["recreational", "developmental", "premium_pro"], help="Skill tier.")
-    parser.add_argument("--style", default="mentor", choices=["cheer", "mentor", "performance"], help="Coach feedback style.")
-    parser.add_argument("--use-llm", action="store_true", help="Generate coach feedback using OpenAI API.")
-    parser.add_argument("--input-type", default="auto", choices=["auto", "annotation", "session"], help="Force input type or auto-detect.")
-    parser.add_argument("--out", default=None, help="Optional path to save combined output JSON.")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--json", required=True, help="Path to input JSON (annotation or session-output).")
+    parser.add_argument("--fps", type=float, default=30.0, help="FPS for annotation JSON duration estimation.")
+    parser.add_argument("--age-band", default="9-12", help="e.g., U8, 9-12, 13+")
+    parser.add_argument("--skill", default="developmental", help="recreational | developmental | premium/pro")
+    parser.add_argument("--style", default="mentor", help="cheer | mentor | performance")
+    parser.add_argument("--use-llm", action="store_true", help="Call the LLM to generate coach feedback.")
+    parser.add_argument("--input-type", default="auto", help="auto | annotation | session_output")
     args = parser.parse_args()
 
-    # Load .env if available
-    if load_dotenv is not None:
-        load_dotenv(override=False)
-
-    data = load_json_or_python_repr(args.json)
+    data = load_json(args.json)
 
     input_type = args.input_type
     if input_type == "auto":
-        input_type = detect_input_type(data)
-        if input_type == "unknown":
-            raise ValueError("Could not auto-detect input type. Use --input-type annotation|session.")
+        input_type = identify_input_format(data)
 
     if input_type == "annotation":
-        metrics = compute_metrics_from_annotation(data, fps=args.fps)
-    elif input_type == "session":
-        metrics = compute_metrics_from_session_output(data)
+        out = compute_metrics_from_annotations(data, fps=args.fps)
+    elif input_type == "session_output":
+        out = compute_metrics_from_session_output(data)
     else:
-        raise ValueError("Unsupported input type.")
+        raise ValueError(f"Unknown input-type: {input_type}")
 
-    # Add derived summaries
-    strengths, focus = interpret_strengths_and_focus(metrics)
-    metrics["strengths"] = strengths
-    metrics["focus"] = focus
+    metrics_block = out["metrics"]
+    scorecard = out.get("scorecard", {})
 
     print("\n=== METRICS ===")
-    print(json.dumps(to_json_safe(metrics), indent=2))
+    print(json.dumps(metrics_block, indent=2, ensure_ascii=False))
 
-    output: Dict[str, Any] = {"metrics": to_json_safe(metrics)}
+    if scorecard:
+        print("\n=== SCORECARD (Rubric) ===")
+        print(json.dumps(scorecard, indent=2, ensure_ascii=False))
 
     if args.use_llm:
-        feedback = generate_coach_feedback_llm(
-            metrics=to_json_safe(metrics),
-            age_band=args.age_band,
-            skill=args.skill,
-            style=args.style,
-        )
         print("\n=== COACH FEEDBACK (Structured JSON) ===")
-        print(json.dumps(to_json_safe(feedback), indent=2))
-        output["coach_feedback"] = to_json_safe(feedback)
-
-    if args.out:
-        with open(args.out, "w", encoding="utf-8") as f:
-            json.dump(to_json_safe(output), f, indent=2)
-        print(f"\nSaved output to: {args.out}")
+        feedback = call_llm_for_feedback(metrics_block, scorecard, args.age_band, args.skill, args.style)
+        # If the LLM didn't provide a drill, inject a safe mat drill
+        if isinstance(feedback, dict) and "drill" not in feedback:
+            feedback["drill"] = select_mat_drill(args.age_band)
+        print(json.dumps(feedback, indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":

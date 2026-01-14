@@ -1,121 +1,124 @@
 # Coach Feedback API — Demo Pipeline (Python)
-This repo contains a simple end-to-end **demo pipeline** that:
-1. Reads a **Video Annotation JSON** export (from your labeling platform)
-2. Computes **metrics** (touch rate, ball control, rhythm, speed, etc.)
-3. Converts metrics into **interpretable 0–1** scores using age/skill thresholds
-4. Calls the **ChatGPT API** to generate **coach feedback** in a chosen style
 
-It’s designed for quick demos and for iterating on scoring rules later.
+This repo contains an end-to-end **demo pipeline** that can run in two modes:
 
-## What the JSON input should contain
-The script expects your export to include a `labels` list with items like:
-* **Positional labels**
-    * `"Ball Position"` (frame + x,y)
-    * `"Corner 1 of Mat"`, `"Corner 2 of Mat"`, `"Corner 3 of Mat"`, `"Corner 4 of Mat"`
-        * Must be in this order:
-            1 = top-left, 2 = top-right, 3 = bottom-right, 4 = bottom-left
-* **Temporal labels (startFrame/endFrame)**
-    * `"Left Ball touch"`, `"Right Ball touch"`
-    * `"Toe tap event"`
-    * Optional (if your labeling includes them): `"Look down"`, `"Ball out of frame"`, `"Ball out of reach"`
-If a label doesn’t exist in your data (e.g., “Look down”), the related metric will just default to a neutral value.
+1) **Annotation JSON mode** (from the Video Annotation / labeling platform)  
+2) **Session-output JSON mode** (a “full analysis” JSON produced by your upstream pipeline)
 
-## How the pipeline works
-### Step 1 — Parse annotation JSON
-* Loads the JSON and separates:
-    * positional labels (corners, ball positions)
-    * temporal labels (touch events)
-### Step 2 — Normalize ball coordinates (homography)
-* Uses the 4 mat corners to compute a perspective transform
-* Converts ball pixel (x,y) → normalized mat coordinates (u,v) in a unit square (0..1)
-* This makes speed/control metrics comparable across clips (even if camera angle changes)
-### Step 3 — Compute raw metrics
-Examples:
-* `touches_per_min`
-* `toe_taps_per_min`
-* `lr_balance_score` (how evenly left/right touches are distributed)
-* `rhythm_score` (steadiness of touch intervals; robust median/MAD method)
-* `ball_avg_speed`, `ball_max_speed`, `ball_speed_spikiness`
-* `ball_control_score` (penalizes spikiness + out-of-frame/out-of-reach durations if labeled)
-### Step 4 — Convert metrics → interpretable scores (0–1)
-* Applies age/skill “starter thresholds” (placeholders you can tune later)
-* Produces:
-    * scores (dict of 0–1 values)
-    * strengths (top 0–1 scores)
-    * focus (lowest 0–1 scores)
-### Step 5 — (Optional) Generate coach feedback via ChatGPT API
-* Sends the metrics + scores to the API
-* Returns a structured JSON response:
-    * praise
-    * strengths
-    * improvements
-    * drill
-    * next_goal
+In both cases the pipeline can:
+- **Parse input JSON**
+- **Compute / extract key metrics**
+- **Apply thresholds + rubric** to produce a simple **scorecard**
+- *(Optional)* call the **OpenAI API** to generate **mat-safe coach feedback**
+- *(Optional)* log the full prompt + response to **LangSmith** for supervisor review
 
-## What each important function does
-### Parsing
-* `load_annotation(path)` → reads JSON file
-* `split_labels(labels)` → splits positional vs temporal labels
-* `extract_corner_sets(positional)` → finds all corner points (may exist at multiple frames)
-* `extract_ball_points(positional)` → ball trajectory points
-* `extract_events(temporal)` → event list (name, startFrame, endFrame)
-* `estimate_duration_seconds(labels, fps)` → rough clip duration from max frame
+---
 
-### Normalization (mat coordinates)
-* `pick_corners_for_frame(corner_sets, frame)` → uses closest corner set for each ball point
-* `homography_from_corners(src_corners)` → computes perspective transform
-* `normalize_ball_track(ball, corner_sets)` → produces `(frame,x,y,u,v)` track
+## Input types
 
-### Metrics
-* `count_events(events)` → counts labels (left touches, right touches, toe taps…)
-* `sum_event_durations(events, target, fps)` → total seconds for an event type
-* `touch_frames_from_events(events)` → uses midpoint frame for touch timing
-* `rhythm_score_from_touches(touch_frames, fps)` → robust rhythm score 0..1
-* `speed_stats(track_uv, fps)` → avg/max speed + spikiness
-* `compute_metrics(labels, fps)` → returns the full metrics JSON
+### A) Annotation JSON (label export)
+Expected structure: a `labels` list containing:
 
-### Scoring + strengths/focus
-* `apply_scores(metrics, age_band, skill)` → adds:
-* scores (0..1)
-* strengths (up to 3)
-* focus (up to 3)
+**Positional labels**
+- `Ball Position` (frame + x,y)
+- `Corner 1 of Mat`, `Corner 2 of Mat`, `Corner 3 of Mat`, `Corner 4 of Mat`
+  - Corner order must be:
+    1 = top-left, 2 = top-right, 3 = bottom-right, 4 = bottom-left
 
-### LLM feedback
-* `generate_coach_feedback(metrics, age_band, skill, coach_style)` → calls ChatGPT API and returns structured feedback JSON
+**Temporal labels (startFrame/endFrame)**
+- `Left Ball touch`, `Right Ball touch`
+- `Toe tap event`
+- Optional (if your labeling includes them): `Look down`, `Ball out of frame`, `Ball out of reach`
+
+> If an optional label doesn’t exist, related metrics default gracefully.
+
+### B) Session-output JSON (analysis export)
+This is the richer “session output” schema (ball control, balance, head up, etc.).  
+The pipeline will **condense** that output into a cleaner, “ideal” set of fields (so it’s not full of duplicates / derivable values).
+
+---
+
+## How the pipeline works (high level)
+
+### Step 1 — Load JSON
+- Detects/uses an input type:
+  - Annotation export → computes metrics from labels
+  - Session-output → extracts + condenses metrics
+
+### Step 2 — Normalize ball coordinates (annotation mode)
+- Uses the 4 mat corners to compute a homography
+- Converts pixel (x,y) → normalized mat coordinates (u,v) in (0..1)
+- Makes speed/control metrics comparable across camera angles
+
+### Step 3 — Metrics
+- Annotation mode computes demo metrics such as:
+  - touches, touches/min, toe taps/min
+  - L/R balance
+  - rhythm steadiness
+  - ball speed + “spikiness”
+  - ball control proxy score
+
+- Session-output mode condenses to the key “ideal” fields per section
+
+### Step 4 — Scoring (thresholds + rubric)
+- Applies starter thresholds (age/skill aware where possible)
+- Produces a **0–100 scorecard**
+- Adds rubric **bands**:
+  - 1–20, 21–40, 41–60, 61–80, 81–100 (with band labels)
+
+### Step 5 — (Optional) LLM coach feedback
+- Builds a strict prompt:
+  - **ONLY mat-safe drills** (4x4 feet)
+  - no jogging/passing/shooting/long-space dribbling
+  - age-appropriate
+- Returns structured JSON feedback:
+  - `praise`
+  - `strengths`
+  - `improvements`
+  - `drill`
+  - `next_goal`
+
+### Step 6 — (Optional) LangSmith tracing
+- When enabled, the OpenAI call is traced so your supervisor can see:
+  - system prompt
+  - user prompt (metrics + scorecard)
+  - model output
+  - latency / tokens
+
+---
+
+## Where to edit rules (the “knobs”)
+These are the most important places to modify behavior:
+
+1) **Mat-safe drill whitelist**
+- `MAT_SAFE_DRILLS`  
+Add/remove drills per age band. Keeps output grounded.
+
+2) **Coach style templates**
+- `STYLE_HINTS`  
+Controls tone + structure (`cheer`, `mentor`, `performance`, etc.).
+
+3) **Hard constraints**
+- `system = (...)`  
+Your guardrails: mat-only, no running/passing/shooting, safe/age-appropriate.
+
+4) **Thresholds + rubric**
+- scoring dicts / functions (`THRESHOLDS`, `RUBRIC_BANDS`, `score_to_band`, etc.)  
+Update to match the scoring criteria sheet.
+
+---
 
 ## Setup
-### 1. Activate your environment
-```
-source .venv/bin/activate
-```
-### 2. Install dependencies
-```
-pip install openai python-dotenv pydantic opencv-python numpy
-```
-### 3. Add your API key (only for `--use-llm`)
-Create a `.env` file in the project root:
-```
 
-OPENAI_API_KEY="YOUR_KEY_HERE"
-OPENAI_MODEL="gpt-5.2"
-```
-Make sure `.env` is in `.gitignore`.
-
-## How to run
-### Metrics only (no API call)
+### First run (metrics-only)
+This confirms the pipeline runs without using any API key:
 ```
 
 python pipeline_demo.py --json data/01081001-2.json --fps 30 --age-band 9-12 --skill developmental --style mentor
 ```
-### Metrics + coach feedback (API call)
+### Second run (LLM + LangSmith)
+This confirms OpenAI + LangSmith are working:
 ```
-
 python pipeline_demo.py --json data/01081001-2.json --fps 30 --age-band 9-12 --skill developmental --style mentor --use-llm
 ```
-### Try different settings
-* `--age-band`: `U8`, `9-12`, `13+`
-* `--skill`: `recreational`, `developmental`, `premium_pro`
-* `--style`: `cheer`, `mentor`, `performance`
-
-
 
