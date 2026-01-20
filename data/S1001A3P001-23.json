@@ -1,0 +1,1629 @@
+{
+  "videoFileName": "S1001A3P001-23.mp4",
+  "drill_id": null,
+  "profile_id": null,
+  "session_id": null,
+  "protocol_version": null,
+  "labels": [
+    {
+      "type": "temporal",
+      "name": "Toe tap event",
+      "startFrame": 28,
+      "endFrame": 531
+    },
+    {
+      "type": "temporal",
+      "name": "Toe tap event",
+      "startFrame": 725,
+      "endFrame": 898
+    },
+    {
+      "type": "positional",
+      "name": "Corner 1 of Mat",
+      "frame": 27,
+      "x": 87,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Corner 2 of Mat",
+      "frame": 27,
+      "x": 167,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Corner 3 of Mat",
+      "frame": 27,
+      "x": 188,
+      "y": 275
+    },
+    {
+      "type": "positional",
+      "name": "Corner 4 of Mat",
+      "frame": 27,
+      "x": 67,
+      "y": 271
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 27,
+      "x": 130,
+      "y": 245
+    },
+    {
+      "type": "temporal",
+      "name": "Look down",
+      "startFrame": 30,
+      "endFrame": 135
+    },
+    {
+      "type": "temporal",
+      "name": "Look down",
+      "startFrame": 189,
+      "endFrame": 259
+    },
+    {
+      "type": "temporal",
+      "name": "Look down",
+      "startFrame": 304,
+      "endFrame": 400
+    },
+    {
+      "type": "temporal",
+      "name": "Look down",
+      "startFrame": 500,
+      "endFrame": 591
+    },
+    {
+      "type": "temporal",
+      "name": "Look down",
+      "startFrame": 734,
+      "endFrame": 850
+    },
+    {
+      "type": "positional",
+      "name": "Corner 1 of Mat",
+      "frame": 898,
+      "x": 90,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Corner 2 of Mat",
+      "frame": 898,
+      "x": 172,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Corner 3 of Mat",
+      "frame": 898,
+      "x": 186,
+      "y": 273
+    },
+    {
+      "type": "positional",
+      "name": "Corner 4 of Mat",
+      "frame": 898,
+      "x": 67,
+      "y": 269
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 898,
+      "x": 127,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 16,
+      "x": 126,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 22,
+      "x": 130,
+      "y": 249
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 24,
+      "x": 130,
+      "y": 249
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 28,
+      "x": 130,
+      "y": 249
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 32,
+      "x": 130,
+      "y": 249
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 42,
+      "x": 131,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 46,
+      "x": 129,
+      "y": 243
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 56,
+      "x": 133,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 66,
+      "x": 143,
+      "y": 249
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 72,
+      "x": 143,
+      "y": 249
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 76,
+      "x": 130,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 82,
+      "x": 126,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 88,
+      "x": 131,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 92,
+      "x": 132,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 100,
+      "x": 135,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 104,
+      "x": 135,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 108,
+      "x": 135,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 110,
+      "x": 135,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 114,
+      "x": 135,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 118,
+      "x": 135,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 122,
+      "x": 135,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 126,
+      "x": 131,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 129,
+      "x": 131,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 133,
+      "x": 131,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 137,
+      "x": 131,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 141,
+      "x": 131,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 145,
+      "x": 131,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 149,
+      "x": 126,
+      "y": 249
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 155,
+      "x": 127,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 157,
+      "x": 127,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 165,
+      "x": 132,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 169,
+      "x": 137,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 177,
+      "x": 142,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 181,
+      "x": 132,
+      "y": 250
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 185,
+      "x": 132,
+      "y": 249
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 191,
+      "x": 128,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 197,
+      "x": 132,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 203,
+      "x": 135,
+      "y": 252
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 209,
+      "x": 128,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 213,
+      "x": 128,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 219,
+      "x": 133,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 223,
+      "x": 131,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 227,
+      "x": 133,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 233,
+      "x": 133,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 237,
+      "x": 133,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 249,
+      "x": 134,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 257,
+      "x": 148,
+      "y": 251
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 265,
+      "x": 135,
+      "y": 250
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 271,
+      "x": 117,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 279,
+      "x": 125,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 283,
+      "x": 125,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 287,
+      "x": 125,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 293,
+      "x": 125,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 297,
+      "x": 125,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 299,
+      "x": 125,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 303,
+      "x": 125,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 309,
+      "x": 127,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 315,
+      "x": 136,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 319,
+      "x": 128,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 325,
+      "x": 132,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 329,
+      "x": 132,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 331,
+      "x": 132,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 333,
+      "x": 132,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 341,
+      "x": 136,
+      "y": 249
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 347,
+      "x": 136,
+      "y": 249
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 351,
+      "x": 136,
+      "y": 249
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 359,
+      "x": 136,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 363,
+      "x": 152,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 367,
+      "x": 151,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 371,
+      "x": 151,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 375,
+      "x": 145,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 379,
+      "x": 132,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 384,
+      "x": 120,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 390,
+      "x": 129,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 396,
+      "x": 143,
+      "y": 250
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 402,
+      "x": 133,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 406,
+      "x": 128,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 412,
+      "x": 128,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 416,
+      "x": 128,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 422,
+      "x": 135,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 426,
+      "x": 135,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 430,
+      "x": 133,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 434,
+      "x": 133,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 438,
+      "x": 133,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 440,
+      "x": 133,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 442,
+      "x": 133,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 446,
+      "x": 133,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 450,
+      "x": 133,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 454,
+      "x": 136,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 458,
+      "x": 136,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 460,
+      "x": 136,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 464,
+      "x": 136,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 466,
+      "x": 136,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 470,
+      "x": 136,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 472,
+      "x": 136,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 476,
+      "x": 136,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 480,
+      "x": 136,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 482,
+      "x": 136,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 488,
+      "x": 140,
+      "y": 251
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 492,
+      "x": 137,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 496,
+      "x": 137,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 500,
+      "x": 132,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 504,
+      "x": 126,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 508,
+      "x": 124,
+      "y": 242
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 514,
+      "x": 120,
+      "y": 240
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 518,
+      "x": 118,
+      "y": 239
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 524,
+      "x": 112,
+      "y": 240
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 532,
+      "x": 115,
+      "y": 241
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 536,
+      "x": 115,
+      "y": 241
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 542,
+      "x": 122,
+      "y": 241
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 548,
+      "x": 154,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 560,
+      "x": 174,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 568,
+      "x": 189,
+      "y": 253
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 574,
+      "x": 192,
+      "y": 251
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 580,
+      "x": 187,
+      "y": 251
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 586,
+      "x": 185,
+      "y": 251
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 592,
+      "x": 185,
+      "y": 251
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 600,
+      "x": 178,
+      "y": 251
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 610,
+      "x": 178,
+      "y": 250
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 616,
+      "x": 163,
+      "y": 250
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 620,
+      "x": 155,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 628,
+      "x": 154,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 632,
+      "x": 154,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 638,
+      "x": 154,
+      "y": 248
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 643,
+      "x": 135,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 647,
+      "x": 134,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 651,
+      "x": 130,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 657,
+      "x": 130,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 661,
+      "x": 130,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 667,
+      "x": 130,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 673,
+      "x": 133,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 677,
+      "x": 133,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 683,
+      "x": 137,
+      "y": 244
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 689,
+      "x": 135,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 697,
+      "x": 130,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 701,
+      "x": 130,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 705,
+      "x": 130,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 709,
+      "x": 130,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 713,
+      "x": 130,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 717,
+      "x": 130,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 721,
+      "x": 130,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 727,
+      "x": 135,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 731,
+      "x": 131,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 735,
+      "x": 131,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 739,
+      "x": 131,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 745,
+      "x": 131,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 749,
+      "x": 131,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 751,
+      "x": 131,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 755,
+      "x": 131,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 759,
+      "x": 131,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 763,
+      "x": 131,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 771,
+      "x": 134,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 775,
+      "x": 129,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 781,
+      "x": 127,
+      "y": 247
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 787,
+      "x": 132,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 793,
+      "x": 133,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 801,
+      "x": 133,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 807,
+      "x": 127,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 811,
+      "x": 127,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 819,
+      "x": 133,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 823,
+      "x": 134,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 829,
+      "x": 137,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 833,
+      "x": 134,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 839,
+      "x": 134,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 843,
+      "x": 130,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 849,
+      "x": 130,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 853,
+      "x": 131,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 857,
+      "x": 131,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 863,
+      "x": 125,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 869,
+      "x": 120,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 873,
+      "x": 130,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 883,
+      "x": 135,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 889,
+      "x": 127,
+      "y": 246
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 894,
+      "x": 129,
+      "y": 245
+    },
+    {
+      "type": "positional",
+      "name": "Ball Position",
+      "frame": 898,
+      "x": 129,
+      "y": 245
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 30,
+      "endFrame": 30
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 43,
+      "endFrame": 43
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 54,
+      "endFrame": 54
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 65,
+      "endFrame": 65
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 78,
+      "endFrame": 78
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 94,
+      "endFrame": 98
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 107,
+      "endFrame": 107
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 120,
+      "endFrame": 120
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 135,
+      "endFrame": 135
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 146,
+      "endFrame": 146
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 161,
+      "endFrame": 161
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 173,
+      "endFrame": 173
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 189,
+      "endFrame": 189
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 202,
+      "endFrame": 202
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 217,
+      "endFrame": 217
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 230,
+      "endFrame": 230
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 242,
+      "endFrame": 242
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 253,
+      "endFrame": 253
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 270,
+      "endFrame": 270
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 285,
+      "endFrame": 312
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 298,
+      "endFrame": 298
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 327,
+      "endFrame": 327
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 340,
+      "endFrame": 340
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 357,
+      "endFrame": 357
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 368,
+      "endFrame": 368
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 385,
+      "endFrame": 385
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 397,
+      "endFrame": 397
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 413,
+      "endFrame": 413
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 426,
+      "endFrame": 426
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 442,
+      "endFrame": 442
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 454,
+      "endFrame": 454
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 472,
+      "endFrame": 472
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 484,
+      "endFrame": 484
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 496,
+      "endFrame": 496
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 512,
+      "endFrame": 512
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 729,
+      "endFrame": 729
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 741,
+      "endFrame": 741
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 751,
+      "endFrame": 751
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 767,
+      "endFrame": 767
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 780,
+      "endFrame": 780
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 792,
+      "endFrame": 792
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 808,
+      "endFrame": 808
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 822,
+      "endFrame": 822
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 836,
+      "endFrame": 836
+    },
+    {
+      "type": "temporal",
+      "name": "Right Ball touch",
+      "startFrame": 852,
+      "endFrame": 878
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 864,
+      "endFrame": 864
+    },
+    {
+      "type": "temporal",
+      "name": "Left Ball touch",
+      "startFrame": 888,
+      "endFrame": 888
+    }
+  ],
+  "exportedAt": "2026-01-20T06:17:09.887Z"
+}
